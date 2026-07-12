@@ -12,21 +12,7 @@ library(tidyverse)
 library(primer.data)
 library(tidymodels)
 library(broom)
-```
-
-```{r}
-colleges |> 
-  ggplot(aes(x = tuition, y = grad_rate)) +
-  geom_point(alpha = 0.4) +
-  geom_smooth(method = "lm", formula = y ~ x, se = FALSE) +
-  labs(
-    title = "Graduation Rate vs. Tuition",
-    subtitle = "Higher tuition is associated with higher graduation rates",
-    x = "Tuition (USD)",
-    y = "Graduation Rate (%)",
-    caption = "Source: colleges dataset from primer.data"
-  ) +
-  theme_minimal()
+library(marginaleffects)
 ```
 
 ```{r}
@@ -41,6 +27,36 @@ x <- colleges |>
   ))
 ```
 
+```{r}
+#| cache: true
+fit_colleges <- linear_reg(engine = "lm") |> fit(grad_rate ~ tuition + selectivity, data = x)
+```
+
+```{r}
+plot_predictions(fit_colleges, condition = c("tuition", "selectivity"), draw = FALSE) |> 
+  ggplot(aes(x = tuition, y = estimate, color = selectivity, fill = selectivity)) +
+  geom_ribbon(aes(ymin = conf.low, ymax = conf.high), alpha = 0.15, color = NA) +
+  geom_line(linewidth = 1.2) +
+  labs(
+    title = "Predicted Graduation Rate by Tuition and Selectivity",
+    subtitle = "Higher tuition and selectivity are associated with higher graduation rates",
+    x = "Tuition",
+    y = "Predicted Graduation Rate",
+    color = "Selectivity",
+    fill = "Selectivity"
+  ) +
+  scale_x_continuous(labels = function(x) paste0("$", x * 10, ",000")) +
+  scale_y_continuous(labels = scales::percent_format()) +
+  scale_color_viridis_d(option = "plasma", end = 0.8) +
+  scale_fill_viridis_d(option = "plasma", end = 0.8) +
+  theme_minimal() +
+  theme(
+    legend.position = "right",
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+```
+
 
 ## Summary
-U.S. College graduation rates vary depending on various factors: one impactful factor is tuition. We used data from the Integrated Postsecondary Education Data System (IPEDS) from 2013 to estimate the difference in expected graduation rates between colleges with tuition of $20,000 and colleges with tuition of $30,000. One potential drawback of our model is how it only represents colleges that participate in financial aid programs, and have a sticker tuition fee of at least 20,000.
+U.S. College graduation rates vary depending on various factors: one impactful factor is tuition. We used data from the Integrated Postsecondary Education Data System (IPEDS) from 2013 to estimate the difference in expected graduation rates between colleges with tuition of $20,000 and colleges with tuition of $30,000. One potential drawback of our model is how it only represents colleges that participate in financial aid programs, and have a sticker tuition fee of at least 20,000. Our model plots U.S. College graduation rates as a normally distributed variable as a linear function of tuition and selectivity. We estimated how tuition increases in 10,000 increases graduation rate by 9 percent, with a 95% confidence interval of 7 to 11 percent. One measure of uncertainty is how the data was in 2013. Additionally, we modeled only Colleges with a tuition of atleast 20,000.
